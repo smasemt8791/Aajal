@@ -6,19 +6,27 @@ import DeadlineForm from './components/DeadlineForm';
 import Modal from './components/Modal';
 import Dashboard from './components/Dashboard';
 import CountDown from './components/CountDown';
-import { Plus, Scale, Moon, Sun, BarChart3, AlertOctagon, Gavel, FileWarning } from 'lucide-react';
+import InstallRibbon from './components/InstallRibbon';
+import { useInstallPrompt } from './hooks/useInstallPrompt';
+import { Plus, Scale, Moon, Sun, BarChart3, AlertOctagon, Gavel, FileWarning, Download } from 'lucide-react';
 
 const App: React.FC = () => {
   const [deadlines, setDeadlines] = useState<Deadline[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [editingDeadline, setEditingDeadline] = useState<Deadline | null>(null);
-  
+  const { isInstallable, handleInstallClick } = useInstallPrompt();
+  const [language, setLanguage] = useState('en');
+
+  useEffect(() => {
+    setLanguage(navigator.language.startsWith('ar') ? 'ar' : 'en');
+  }, []);
+
   // Theme State
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') === 'dark' || 
-             (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      return localStorage.getItem('theme') === 'dark' ||
+        (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
     }
     return true;
   });
@@ -80,7 +88,7 @@ const App: React.FC = () => {
 
   // Derived State for Sections
   const now = Date.now();
-  
+
   // Top 3 Critical (Upcoming, sorted by closeness)
   const criticalDeadlines = deadlines
     .filter(d => d.targetDate > now)
@@ -92,8 +100,13 @@ const App: React.FC = () => {
   const filings = deadlines.filter(d => d.type === 'filing' || d.type === 'limitation');
 
   return (
-    <div className="min-h-screen text-slate-900 dark:text-gray-100 transition-colors duration-300 pb-24">
-      
+    <div
+      className="min-h-screen text-slate-900 dark:text-gray-100 transition-colors duration-300 pb-24 bg-cover bg-center bg-fixed"
+      style={{
+        backgroundImage: isDark ? "url('/images/backgournd dark.png')" : "url('/images/backgournd.png')"
+      }}
+    >
+
       {/* Top Decoration Bar */}
       <div className="h-1 bg-gradient-to-r from-primary-500 via-gold-500 to-primary-500 w-full fixed top-0 z-50"></div>
 
@@ -112,8 +125,17 @@ const App: React.FC = () => {
               <p className="text-sm text-primary-600 dark:text-primary-400 mt-1 font-medium">مساعدك في المواعيد القضائية</p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2 md:gap-3">
+            {isInstallable && (
+              <button
+                onClick={handleInstallClick}
+                className="hidden md:flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-4 py-2 rounded-lg transition-all shadow-md active:scale-95 font-medium text-sm"
+              >
+                <Download className="w-4 h-4" />
+                <span>{language === 'ar' ? 'حمل التطبيق' : 'Install App'}</span>
+              </button>
+            )}
             <button
               onClick={() => setIsDashboardOpen(true)}
               className="p-3 rounded-lg bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-slate-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-primary-600 dark:hover:text-primary-400 transition-all active:scale-95 shadow-sm"
@@ -143,42 +165,42 @@ const App: React.FC = () => {
 
       {/* Main Content */}
       <main className="max-w-5xl mx-auto p-4 md:p-6 mt-6 space-y-12">
-        
+
         {/* Critical Top 3 Dashboard */}
         {criticalDeadlines.length > 0 && (
-            <section className="animate-fade-in">
-                <div className="flex items-center gap-3 mb-5">
-                    <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/20 text-red-600">
-                        <AlertOctagon className="w-6 h-6" />
+          <section className="animate-fade-in">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/20 text-red-600">
+                <AlertOctagon className="w-6 h-6" />
+              </div>
+              <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+                المواعيد الأكثر أهمية
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {criticalDeadlines.map((deadline) => (
+                <div key={'crit-' + deadline.id} className="relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 text-white rounded-2xl p-6 shadow-lg border border-slate-700">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 to-orange-500"></div>
+                  <div className="flex justify-between items-start mb-5">
+                    <h3 className="font-bold text-xl truncate max-w-[80%]">{deadline.caseTitle}</h3>
+                    <span className="text-sm bg-white/10 px-2 py-1 rounded text-gray-300 font-mono">#{deadline.caseNumber}</span>
+                  </div>
+
+                  <div className="bg-white/5 rounded-xl p-4 text-center border border-white/5">
+                    <CountDown targetDate={deadline.targetDate} />
+                  </div>
+
+                  {deadline.assignedTo && (
+                    <div className="mt-4 flex justify-between items-center text-sm text-gray-400">
+                      <span>المكلف:</span>
+                      <span className="text-white font-medium">{deadline.assignedTo}</span>
                     </div>
-                    <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-                        المواعيد الأكثر أهمية
-                    </h2>
+                  )}
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                    {criticalDeadlines.map((deadline) => (
-                        <div key={'crit-'+deadline.id} className="relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 text-white rounded-2xl p-6 shadow-lg border border-slate-700">
-                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 to-orange-500"></div>
-                            <div className="flex justify-between items-start mb-5">
-                                <h3 className="font-bold text-xl truncate max-w-[80%]">{deadline.caseTitle}</h3>
-                                <span className="text-sm bg-white/10 px-2 py-1 rounded text-gray-300 font-mono">#{deadline.caseNumber}</span>
-                            </div>
-                            
-                            <div className="bg-white/5 rounded-xl p-4 text-center border border-white/5">
-                                <CountDown targetDate={deadline.targetDate} />
-                            </div>
-                            
-                            {deadline.assignedTo && (
-                                <div className="mt-4 flex justify-between items-center text-sm text-gray-400">
-                                    <span>المكلف:</span>
-                                    <span className="text-white font-medium">{deadline.assignedTo}</span>
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            </section>
+              ))}
+            </div>
+          </section>
         )}
 
         {deadlines.length === 0 ? (
@@ -188,7 +210,7 @@ const App: React.FC = () => {
             </div>
             <h2 className="text-3xl font-serif text-slate-700 dark:text-slate-300 mb-2">القائمة فارغة</h2>
             <p className="text-base opacity-60">لا توجد مواعيد مسجلة حالياً، ابدأ بإضافة موعد جديد</p>
-            <button 
+            <button
               onClick={handleAddClick}
               className="mt-8 text-primary-600 dark:text-primary-400 hover:underline font-bold text-lg"
             >
@@ -199,52 +221,52 @@ const App: React.FC = () => {
           <>
             {/* Section 1: Hearings & Appointments */}
             {appointments.length > 0 && (
-                <section>
-                    <div className="flex items-center justify-between mb-8 px-1 border-b border-gray-200 dark:border-slate-800 pb-3">
-                        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-3">
-                            <Gavel className="w-6 h-6 text-primary-600" />
-                            المواعيد والجلسات القضائية
-                        </h2>
-                        <span className="bg-primary-50 dark:bg-slate-800 text-primary-600 dark:text-primary-400 px-4 py-1.5 rounded-full text-sm font-bold">
-                            {appointments.length}
-                        </span>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {appointments.map((deadline) => (
-                            <DeadlineCard
-                            key={deadline.id}
-                            deadline={deadline}
-                            onEdit={handleEditClick}
-                            onDelete={handleDeleteClick}
-                            />
-                        ))}
-                    </div>
-                </section>
+              <section>
+                <div className="flex items-center justify-between mb-8 px-1 border-b border-gray-200 dark:border-slate-800 pb-3">
+                  <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-3">
+                    <Gavel className="w-6 h-6 text-primary-600" />
+                    المواعيد والجلسات القضائية
+                  </h2>
+                  <span className="bg-primary-50 dark:bg-slate-800 text-primary-600 dark:text-primary-400 px-4 py-1.5 rounded-full text-sm font-bold">
+                    {appointments.length}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {appointments.map((deadline) => (
+                    <DeadlineCard
+                      key={deadline.id}
+                      deadline={deadline}
+                      onEdit={handleEditClick}
+                      onDelete={handleDeleteClick}
+                    />
+                  ))}
+                </div>
+              </section>
             )}
 
             {/* Section 2: Filings & Limitations */}
             {filings.length > 0 && (
-                <section>
-                    <div className="flex items-center justify-between mb-8 px-1 border-b border-gray-200 dark:border-slate-800 pb-3">
-                        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-3">
-                            <FileWarning className="w-6 h-6 text-amber-600" />
-                            المهل القانونية والإيداعات
-                        </h2>
-                        <span className="bg-amber-50 dark:bg-slate-800 text-amber-600 dark:text-amber-400 px-4 py-1.5 rounded-full text-sm font-bold">
-                            {filings.length}
-                        </span>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {filings.map((deadline) => (
-                            <DeadlineCard
-                            key={deadline.id}
-                            deadline={deadline}
-                            onEdit={handleEditClick}
-                            onDelete={handleDeleteClick}
-                            />
-                        ))}
-                    </div>
-                </section>
+              <section>
+                <div className="flex items-center justify-between mb-8 px-1 border-b border-gray-200 dark:border-slate-800 pb-3">
+                  <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-3">
+                    <FileWarning className="w-6 h-6 text-amber-600" />
+                    المهل القانونية والإيداعات
+                  </h2>
+                  <span className="bg-amber-50 dark:bg-slate-800 text-amber-600 dark:text-amber-400 px-4 py-1.5 rounded-full text-sm font-bold">
+                    {filings.length}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {filings.map((deadline) => (
+                    <DeadlineCard
+                      key={deadline.id}
+                      deadline={deadline}
+                      onEdit={handleEditClick}
+                      onDelete={handleDeleteClick}
+                    />
+                  ))}
+                </div>
+              </section>
             )}
           </>
         )}
@@ -283,6 +305,8 @@ const App: React.FC = () => {
       >
         <Dashboard deadlines={deadlines} />
       </Modal>
+
+      <InstallRibbon />
     </div>
   );
 };
